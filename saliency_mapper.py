@@ -130,6 +130,11 @@ class ResNet(nn.Module):
         X_t = X_t.view(1000,7,7)
         X_t = torch.sigmoid(X_t)
         return (X*X_t).unsqueeze(0)
+    
+    def mask(self,x):
+        x = x.squeeze(0)
+        x = torch.abs(x[0])/( torch.abs(x[0]) + torch.abs(x[1]) ) 
+        return x
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None

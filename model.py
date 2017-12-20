@@ -4,18 +4,8 @@ import torch
 from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 from PIL import Image
-model = resnet.resnet50(pretrained=True)
-from classes import classes
-#print(model)
-# X = misc.imread('./test.jpg')
 
-# X = misc.imresize(X,(224,224))
-# print(X.shape)
-# X = torch.from_numpy(X)
-# print(X.size())
-# x = Variable(X)
-# output = model(x)
-
+model = resnet.resnet50()
 
 
 imsize = 256

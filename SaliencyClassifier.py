@@ -11,17 +11,27 @@ class SaliencyClassifier(nn.Module):
         super(SaliencyClassifier,self).__init__()
         self.class_size = class_size
         self.batch_size = batch_size
-        self.convs = convs
-        self.classifier = nn.Conv2d(1024,class_size, kernel_size=3, padding=1)
-        self.mask = Sequential([
-            nn.Conv2d(2,size,kernel_size=1,padding=0),
-            self.createMask()
-        ])
-
+        self.resnetScale1 = _make_layer(filter_sizes=[16,16,16],num_filters=[3,3,3],pool_size=2)
         self._initialize_weights()
     
     def createMask(features):
         return abs(features[0]) / ( abs(features[0]) + abs(features[1]) )
+
+    def _make_layer(self, filter_sizes,num_filters,pool_size):
+        
+        layers = []
+
+        for i,filter_size in enumerate(filter_sizes):
+            num_filter = num_filters[i]
+            layers.append(
+                nn.Conv2d(self.inplanes, num_filter,
+                          kernel_size=filter_size, bias=False)
+            )
+        
+        layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
+
+        self.inplanes = num_filter[-1]
+        return nn.Sequential(*layers)
 
     def forward(self,x):
 
@@ -33,7 +43,7 @@ class SaliencyClassifier(nn.Module):
         scale4 = self.resnetScale4(x)
         scale5 = self.resnetScale5(x)
 
-        features = this.feature_filter(scale5)
+        features = self.feature_filter(scale5)
         upSampled = self.upSample(features)
         features = torch.cat([upSampled,scale4])
 

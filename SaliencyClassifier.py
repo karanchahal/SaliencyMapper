@@ -7,30 +7,34 @@ import math
 
 class SaliencyClassifier(nn.Module):
 
-    def __init__(self,convs,class_size,batch_size):
+    def __init__(self,class_size,batch_size):
         super(SaliencyClassifier,self).__init__()
+        self.inplanes = 3
         self.class_size = class_size
         self.batch_size = batch_size
-        self.resnetScale1 = _make_layer(filter_sizes=[16,16,16],num_filters=[3,3,3],pool_size=2)
+        self.resnetScale1 = self._make_layer(num_filters=[64],filter_sizes=[3],pool_size=2)
+        self.resnetScale2 = self._make_layer(num_filters=[64],filter_sizes=[3],pool_size=2)
+        self.resnetScale3 = self._make_layer(num_filters=[64],filter_sizes=[3],pool_size=8)
+        
         self._initialize_weights()
     
-    def createMask(features):
-        return abs(features[0]) / ( abs(features[0]) + abs(features[1]) )
 
-    def _make_layer(self, filter_sizes,num_filters,pool_size):
+
+    def _make_layer(self,num_filters,filter_sizes,pool_size):
         
         layers = []
 
         for i,filter_size in enumerate(filter_sizes):
             num_filter = num_filters[i]
+            print(self.inplanes,num_filter)
             layers.append(
                 nn.Conv2d(self.inplanes, num_filter,
                           kernel_size=filter_size, bias=False)
             )
+            self.inplanes = num_filter
         
         layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
 
-        self.inplanes = num_filter[-1]
         return nn.Sequential(*layers)
 
     def forward(self,x):
@@ -38,22 +42,30 @@ class SaliencyClassifier(nn.Module):
         img = x
 
         scale1 = self.resnetScale1(x)
-        scale2 = self.resnetScale2(x)
-        scale3 = self.resnetScale3(x)
-        scale4 = self.resnetScale4(x)
-        scale5 = self.resnetScale5(x)
+        print(scale1.size())
 
-        features = self.feature_filter(scale5)
-        upSampled = self.upSample(features)
-        features = torch.cat([upSampled,scale4])
+        scale2 = self.resnetScale2(scale1)
+        print(scale2.size())
 
-        upSampled = self.upSample(features)
-        features = torch.cat([upSampled,scale3])
+        scale3 = self.resnetScale3(scale2)
+        print(scale3.size())
 
-        upSampled = self.upSample(features)
-        features = torch.cat([upSampled,scale2])
+        # scale2 = self.resnetScale2(x)
+        # scale3 = self.resnetScale3(x)
+        # scale4 = self.resnetScale4(x)
+        # scale5 = self.resnetScale5(x)
 
-        x = self.mask(features)
+        # features = self.feature_filter(scale5)
+        # upSampled = self.upSample(features)
+        # features = torch.cat([upSampled,scale4])
+
+        # upSampled = self.upSample(features)
+        # features = torch.cat([upSampled,scale3])
+
+        # upSampled = self.upSample(features)
+        # features = torch.cat([upSampled,scale2])
+
+        # x = self.mask(features)
 
         return x
 
@@ -71,3 +83,6 @@ class SaliencyClassifier(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
+x = torch.autograd.Variable(torch.randn((1,3,32,32)))
+model = SaliencyClassifier(10,20)
+o = model(x)

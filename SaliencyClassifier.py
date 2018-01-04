@@ -4,13 +4,16 @@ import torch.nn as nn
 import torch.nn.functional as F 
 import math
 
-def PixelShuffleBlock():
+class PixelShuffleBlock(nn.Module):
+    def forward(self,x):
+        return F.pixel_shuffle(x,2)
     
 
 def UpSampleBlock(in_channels,out_channels,kernel_size=3):
     modules = [
         BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size]),
         PixelShuffleBlock(),
+        nn.ReLU()
     ]
     
 

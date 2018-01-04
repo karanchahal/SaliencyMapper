@@ -104,11 +104,13 @@ class SaliencyModel(nn.Module):
     def __init__(self,batch_size,class_size):
         self.class_size = class_size
         self.batch_size = batch_size
-
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
-        #fefe
+        self.upsample0 = UpSampler()
+        self.upsample1 = UpSampler()
+        self.upsample2 = UpSampler()
     
     # def forward(self,x):
+
 
 class UpSampler(nn.Module):
     def __init__(self,in_channels,out_channels):

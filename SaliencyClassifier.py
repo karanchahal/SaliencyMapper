@@ -4,6 +4,36 @@ import torch.nn as nn
 import torch.nn.functional as F 
 import math
 
+def PixelShuffleBlock():
+    
+
+def UpSampleBlock(in_channels,out_channels,kernel_size=3):
+    modules = [
+        BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size]),
+        PixelShuffleBlock(),
+    ]
+    
+
+def BottleneckBlock(num_filters,inplanes,filter_sizes,bn=True,activation=True):
+    layers = []
+
+    for i,filter_size in enumerate(filter_sizes):
+        num_filter = num_filters[i]
+        layers.append(
+            nn.Conv2d(inplanes, num_filter,
+                        kernel_size=filter_size, bias=False)
+        )
+        if bn:
+            layers.append(nn.BatchNorm2d(num_filter, affine=affine))
+        if activation:
+            layers.append(nn.ReLU())
+
+        inplanes = num_filter
+    
+    # layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
+
+    return nn.Sequential(*layers),inplanes
+    
 
 class SaliencyClassifier(nn.Module):
 
@@ -11,14 +41,18 @@ class SaliencyClassifier(nn.Module):
         super(SaliencyClassifier,self).__init__()
         self.inplanes = 3
         BASE = 24
+
         self.class_size = class_size
         self.batch_size = batch_size
-        self.scale0 = self._make_layer(num_filters=[BASE],filter_sizes=[3])
-        self.scale1 = self._make_layer(num_filters=[BASE*2],filter_sizes=[3])
-        self.scale2 = self._make_layer(num_filters=[BASE*4],filter_sizes=[3])
-        self.scale3 = self._make_layer(num_filters=[BASE*8],filter_sizes=[3])
+
+        self.scale0,self.inplanes = BottleneckBlock(num_filters=[BASE],inplanes=self.inplanes,filter_sizes=[3])
+        self.scale1,self.inplanes = BottleneckBlock(num_filters=[BASE*2],inplanes=self.inplanes,filter_sizes=[3])
+        self.scale2,self.inplanes = BottleneckBlock(num_filters=[BASE*4],inplanes=self.inplanes,filter_sizes=[3])
+        self.scale3,self.inplanes = BottleneckBlock(num_filters=[BASE*8],inplanes=self.inplanes,filter_sizes=[3])
+
         self.scaleX = nn.AvgPool2d(kernel_size=16)
         self.fc = nn.Linear(BASE*8,class_size)
+
         self._initialize_weights()
 
     def forward(self,x):
@@ -46,26 +80,7 @@ class SaliencyClassifier(nn.Module):
 
         return scale0,scale1,scale2,scale3,scaleX,scaleC
     
-    def _make_layer(self,num_filters,filter_sizes,bn=True,activation=True):
-        
-        layers = []
-
-        for i,filter_size in enumerate(filter_sizes):
-            num_filter = num_filters[i]
-            layers.append(
-                nn.Conv2d(self.inplanes, num_filter,
-                          kernel_size=filter_size, bias=False)
-            )
-            if bn:
-                layers.append(nn.BatchNorm2d(num_filter, affine=affine))
-            if activation:
-                layers.append(nn.ReLU())
-
-            self.inplanes = num_filter
-        
-        # layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
-
-        return nn.Sequential(*layers)
+    
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -90,17 +105,19 @@ class SaliencyModel(nn.Module):
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
         #fefe
     
-    def forward(self,x):
+    # def forward(self,x):
 
 class UpSampler(nn.Module):
-    def __init__():
-        self.upsampler = upsample_block(in_channels=in_channels,
+    def __init__(self,in_channels,out_channels):
+        super(UpSampler, self).__init__()
+        self.upsampler = UpSampleBlock(in_channels=in_channels,
                                         out_channels=out_channels,
                                         kernel_size=3)
         bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck = _make_layer(num_filters=[bottleneck_in_channels],filter_size=[3])
+        self.bottleneck = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_size=[3])
+    
     def forward(self,x,passthrough):
-        
+
         upsampled = self.upsampler(x)
         upsampled = torch.cat((upsampled,passthrough),1)
 

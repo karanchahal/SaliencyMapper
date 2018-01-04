@@ -101,6 +101,10 @@ class UpSampler(nn.Module):
         self.bottleneck = _make_layer(num_filters=[bottleneck_in_channels],filter_size=[3])
     def forward(self,x,passthrough):
         
+        upsampled = self.upsampler(x)
+        upsampled = torch.cat((upsampled,passthrough),1)
+
+        return self.bottleneck(upsampled)
 
 x = torch.autograd.Variable(torch.randn((1,3,32,32)))
 model = SaliencyClassifier(10,1)

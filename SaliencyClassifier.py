@@ -6,18 +6,23 @@ import math
 
 class PixelShuffleBlock(nn.Module):
     def forward(self,x):
+        return F.conv_transpose2d(x,filters,padding=1)
         return F.pixel_shuffle(x,2)
     
 
 def UpSampleBlock(in_channels,out_channels,kernel_size=3):
-    modules = [
-        BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size]),
-        PixelShuffleBlock(),
+    layers = [
+        nn.ConvTranspose2d(in_channels=192,out_channels=96,kernel_size=3,padding=0),
+        BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size])[0],
+        
         nn.ReLU()
     ]
     
+    return nn.Sequential(*layers)
+    
 
-def BottleneckBlock(num_filters,inplanes,filter_sizes,bn=True,activation=True):
+def BottleneckBlock(num_filters,inplanes,filter_sizes,bn=True,activation=True,_list=False):
+    
     layers = []
 
     for i,filter_size in enumerate(filter_sizes):
@@ -27,13 +32,15 @@ def BottleneckBlock(num_filters,inplanes,filter_sizes,bn=True,activation=True):
                         kernel_size=filter_size, bias=False)
         )
         if bn:
-            layers.append(nn.BatchNorm2d(num_filter, affine=affine))
+            layers.append(nn.BatchNorm2d(num_filter))
         if activation:
             layers.append(nn.ReLU())
 
         inplanes = num_filter
     
     # layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
+    if _list:
+        return layers
 
     return nn.Sequential(*layers),inplanes
     
@@ -62,24 +69,24 @@ class SaliencyClassifier(nn.Module):
 
         img = x
         scale0 = self.scale0(x)
-        print(scale0.size())
+        # print(scale0.size())
 
         scale1 = self.scale1(scale0)
-        print(scale1.size())
+        # print(scale1.size())
 
         scale2 = self.scale2(scale1)
-        print(scale2.size())
+        # print(scale2.size())
 
         scale3 = self.scale3(scale2)
-        print(scale3.size())
+        # print(scale3.size())
 
         scaleX = self.scaleX(scale3)
         scaleX = scaleX.view(self.batch_size,-1)
 
-        print(scaleX.size())
+        # print(scaleX.size())
 
         scaleC = self.fc(scaleX)
-        print(scaleC.size())
+        # print(scaleC.size())
 
         return scale0,scale1,scale2,scale3,scaleX,scaleC
     
@@ -101,33 +108,41 @@ class SaliencyClassifier(nn.Module):
 
 
 class SaliencyModel(nn.Module):
-    def __init__(self,batch_size,class_size):
+    def __init__(self,class_size,batch_size):
+        super(SaliencyModel,self).__init__()
         self.class_size = class_size
         self.batch_size = batch_size
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
-        self.upsample0 = UpSampler()
-        self.upsample1 = UpSampler()
-        self.upsample2 = UpSampler()
+        self.upsample0 = UpSampler(in_channels=192,out_channels=48,passthrough_channels=48)
+        # self.upsample1 = UpSampler(in_channels=96,out_channels=)
+        # self.upsample2 = UpSampler(in_channels=,out_channels=)
     
-    # def forward(self,x):
+    def forward(self,x):
+        s0,s1,s2,s3,sX,sC = self.classifier(x)
+        s3 = self.upsample0(s3,s2)
+        print(s3.size())
+
+        return s3
 
 
 class UpSampler(nn.Module):
-    def __init__(self,in_channels,out_channels):
+    def __init__(self,in_channels,out_channels,passthrough_channels):
         super(UpSampler, self).__init__()
         self.upsampler = UpSampleBlock(in_channels=in_channels,
                                         out_channels=out_channels,
                                         kernel_size=3)
         bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_size=[3])
-    
+        self.bottleneck = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[3])
+
     def forward(self,x,passthrough):
 
         upsampled = self.upsampler(x)
+        print(upsampled.size())
+        print(passthrough.size())
         upsampled = torch.cat((upsampled,passthrough),1)
 
         return self.bottleneck(upsampled)
 
 x = torch.autograd.Variable(torch.randn((1,3,32,32)))
-model = SaliencyClassifier(10,1)
+model = SaliencyModel(10,1)
 o = model(x)

@@ -114,15 +114,18 @@ class SaliencyModel(nn.Module):
         self.batch_size = batch_size
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
         self.upsample0 = UpSampler(in_channels=192,out_channels=96,passthrough_channels=96)
-        # self.upsample1 = UpSampler(in_channels=96,out_channels=)
-        # self.upsample2 = UpSampler(in_channels=,out_channels=)
+        self.upsample1 = UpSampler(in_channels=96,out_channels=48,passthrough_channels=48)
+        self.upsample2 = UpSampler(in_channels=48,out_channels=24,passthrough_channels=24)
     
     def forward(self,x):
         s0,s1,s2,s3,sX,sC = self.classifier(x)
-        print(s2.size())
-        s3 = self.upsample0(s3,s2)
         print(s3.size())
-
+        s2 = self.upsample0(s3,s2)
+        print(s1.size())
+        s1 = self.upsample1(s2,s1)
+        print(s1.size())
+        s0 = self.upsample2(s1,s0)
+        print(s0.size())
         return s3
 
 
@@ -133,7 +136,7 @@ class UpSampler(nn.Module):
                                         out_channels=out_channels,
                                         kernel_size=3)
         bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[3])
+        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[1])
 
     def forward(self,x,passthrough):
 

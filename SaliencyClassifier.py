@@ -12,9 +12,9 @@ class PixelShuffleBlock(nn.Module):
 
 def UpSampleBlock(in_channels,out_channels,kernel_size=3):
     layers = [
-        nn.ConvTranspose2d(in_channels=192,out_channels=96,kernel_size=3,padding=0),
         BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size])[0],
-        
+        nn.ConvTranspose2d(in_channels=out_channels*4,out_channels=out_channels*2,kernel_size=3,padding=0),
+        nn.ConvTranspose2d(in_channels=out_channels*2,out_channels=out_channels,kernel_size=3,padding=0),
         nn.ReLU()
     ]
     
@@ -113,12 +113,13 @@ class SaliencyModel(nn.Module):
         self.class_size = class_size
         self.batch_size = batch_size
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
-        self.upsample0 = UpSampler(in_channels=192,out_channels=48,passthrough_channels=48)
+        self.upsample0 = UpSampler(in_channels=192,out_channels=96,passthrough_channels=96)
         # self.upsample1 = UpSampler(in_channels=96,out_channels=)
         # self.upsample2 = UpSampler(in_channels=,out_channels=)
     
     def forward(self,x):
         s0,s1,s2,s3,sX,sC = self.classifier(x)
+        print(s2.size())
         s3 = self.upsample0(s3,s2)
         print(s3.size())
 
@@ -132,15 +133,12 @@ class UpSampler(nn.Module):
                                         out_channels=out_channels,
                                         kernel_size=3)
         bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[3])
+        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[3])
 
     def forward(self,x,passthrough):
 
         upsampled = self.upsampler(x)
-        print(upsampled.size())
-        print(passthrough.size())
         upsampled = torch.cat((upsampled,passthrough),1)
-
         return self.bottleneck(upsampled)
 
 x = torch.autograd.Variable(torch.randn((1,3,32,32)))

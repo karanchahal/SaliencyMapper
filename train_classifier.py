@@ -36,6 +36,9 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 
 for epoch in range(2):  # loop over the dataset multiple times
+    
+    if((epoch+1)%2 == 0 and epoch+1 < 3):
+        optimizer.lr /= 10
 
     running_loss = 0.0
     running_corrects = 0.0
@@ -78,7 +81,7 @@ dataiter = iter(testloader)
 images, labels = dataiter.next()
 
 
-outputs = net(Variable(images))
+scale0,scale1,scale2,scale3,scaleX,outputs = net(Variable(images))
 _, predicted = torch.max(outputs.data, 1)
 
 print('Predicted: ', ' '.join('%5s' % classes[predicted[j]]

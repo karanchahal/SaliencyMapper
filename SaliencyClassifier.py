@@ -5,10 +5,6 @@ import torch.nn.functional as F
 import math
 import utils
 
-class PixelShuffleBlock(nn.Module):
-    def forward(self,x):
-        return F.conv_transpose2d(x,filters,padding=1)
-        return F.pixel_shuffle(x,2)
     
 
 def UpSampleBlock(in_channels,out_channels,kernel_size=3):

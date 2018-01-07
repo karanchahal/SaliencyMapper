@@ -145,17 +145,16 @@ class UpSampler(nn.Module):
         upsampled = torch.cat((upsampled,passthrough),1)
         return self.bottleneck(upsampled)
 
-class SaliencyLoss():
+# class SaliencyLoss():
     
-    def__init__(self,classifier):
-        self.classifier = classifier
+#     def__init__(self,classifier):
+#         self.classifier = classifier
     
-    def get_loss(self,masks,images,targets):
+#     def get_loss(self,masks,images,targets):
         
         
 
-
-x = torch.autograd.Variable(torch.randn((1,3,32,32)))
-model = SaliencyModel(10,1)
-o = model(x)
+# x = torch.autograd.Variable(torch.randn((1,3,32,32)))
+# model = SaliencyModel(10,1)
+# o = model(x)
 

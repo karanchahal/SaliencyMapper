@@ -13,10 +13,8 @@ def total_variation(masks,power=2,border_penalty=0.3):
 
     
     return (x_loss + y_loss + border) / float(power*masks.size(0)) # normalized for batch size
-
 def tensor_of_shape(x):
     return torch.zeros(*x.size())
-
 def average_mask_loss(masks):
     if(power != 1):
         masks = (masks + 0.0005)**power # prevent nan derivative of sqrt at 0 is inf
@@ -39,6 +37,7 @@ def theta(images,masks):
     return (masks*images.detach()) + (1. - masks)*alt.detach()
 def classfier_loss():
     #todo
+
     return 1
 
 def test():
@@ -58,4 +57,4 @@ def test():
     s.backward()
     print(torch.sum(m.grad))
 
-test()
+# test()

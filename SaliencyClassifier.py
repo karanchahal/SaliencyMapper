@@ -3,6 +3,7 @@ from torch.autograd import Variable
 import torch.nn as nn 
 import torch.nn.functional as F 
 import math
+import utils
 
 class PixelShuffleBlock(nn.Module):
     def forward(self,x):
@@ -126,7 +127,7 @@ class SaliencyModel(nn.Module):
         print(s1.size())
         s0 = self.upsample2(s1,s0)
         print(s0.size())
-        return s3
+        return s0
 
 
 class UpSampler(nn.Module):
@@ -144,6 +145,17 @@ class UpSampler(nn.Module):
         upsampled = torch.cat((upsampled,passthrough),1)
         return self.bottleneck(upsampled)
 
+class SaliencyLoss():
+    
+    def__init__(self,classifier):
+        self.classifier = classifier
+    
+    def get_loss(self,masks,images,targets):
+        
+        
+
+
 x = torch.autograd.Variable(torch.randn((1,3,32,32)))
 model = SaliencyModel(10,1)
 o = model(x)
+

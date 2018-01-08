@@ -10,6 +10,12 @@ from torch.autograd import Variable
 def save_checkpoint(state, filename='small.pth.tar'):
     torch.save(state, filename)
 
+def load_checkpoint(net,optimizer,filename='small.pth.tar'):
+    checkpoint = torch.load(filename)
+    net.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    return net,optimizer
+    
 transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -34,11 +40,10 @@ net = SaliencyClassifier(10,4)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
+net,optimizer = load_checkpoint(net,optimizer)
 
-for epoch in range(2):  # loop over the dataset multiple times
-    
-    if((epoch+1)%2 == 0 and epoch+1 < 3):
-        optimizer.lr /= 10
+for epoch in range(20):  # loop over the dataset multiple times
+
 
     running_loss = 0.0
     running_corrects = 0.0
@@ -66,12 +71,10 @@ for epoch in range(2):  # loop over the dataset multiple times
         print(i)
         print('Epoch = %f , Accuracy = %f, Loss = %f '%(epoch+1 , running_corrects/(4*(i+1)), running_loss/(4*(i+1))) )
         
-
-
-save_checkpoint({
-    'state_dict': net.state_dict(),
-    'optimizer' : optimizer.state_dict()
-    })
+    save_checkpoint({
+        'state_dict': net.state_dict(),
+        'optimizer' : optimizer.state_dict()
+        })
 
 
 # Testing 

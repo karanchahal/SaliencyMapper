@@ -37,27 +37,29 @@ def theta(images,masks):
 
     return (masks*images.detach()) + (1. - masks)*alt.detach()
 
-# def class_selector_loss(logits,targets):
-    
+def class_selector_loss(logits,labels):
+    this = torch.sum(logits*labels,1)
+    return torch.mean(this)
+
 def one_hot(targets,dim=10):
    return Variable(torch.zeros( targets.size(0),dim).scatter_(1,targets.long().view(-1,1).data,1 ) )
     
-def classfier_loss(images,masks,targets,black_box_func):
+def classfier_loss(images,masks,labels,black_box_func,lambda1=0.5,lambda2=8,lambda3=0.3,lambda4=0.2):
     
-    targets = one_hot(targets)
+    labels = one_hot(labels)
     preserver_images = theta(images,masks)
     destroyer_images = theta(images,1 - masks)
 
     preserved_logits = black_box_func(preserver_images)
     destroyer_logits = black_box_func(destroyer_images)
 
-    preserver_loss = class_selector_loss( preserved_logits )
-    destroyer_loss = class_selector_loss( destroyer_logits )
+    preserver_loss = torch.log(class_selector_loss( preserved_logits ))
+    destroyer_loss = class_selector_loss( destroyer_logits ) 
     area_loss = average_mask_loss(masks)
     smoothness_loss = total_variation(masks)
 
 
-    return 1
+    return lambda1*smoothness_loss + lambda2*area_loss - preserver_loss + lambda3*torch.pow(destroyer_loss,lambda4)
 
 def test():
     from PIL import Image
@@ -77,6 +79,7 @@ def test():
     print(torch.sum(m.grad))
 
 a = Variable(torch.ones((2,1)))
+b = Variable(torch.randn(2,10))
 a[0,0] = 1
 a[1,0] = 4
-print(one_hot(a,10))
+class_selector_loss(b,one_hot(a))

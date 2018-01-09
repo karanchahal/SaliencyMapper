@@ -1,6 +1,7 @@
 import torch
 from scipy import misc
 from torch.autograd import Variable
+import numpy as np
 def total_variation(masks,power=2,border_penalty=0.3):
     #todo
     x_loss = torch.sum((torch.abs(masks[:,:1:,:] - masks[:,:,:-1,:]))**power)
@@ -35,8 +36,26 @@ def theta(images,masks):
     alt = Variable(alt, requires_grad=False)
 
     return (masks*images.detach()) + (1. - masks)*alt.detach()
-def classfier_loss():
-    #todo
+
+# def class_selector_loss(logits,targets):
+    
+def one_hot(targets,dim=10):
+   return Variable(torch.zeros( targets.size(0),dim).scatter_(1,targets.long().view(-1,1).data,1 ) )
+    
+def classfier_loss(images,masks,targets,black_box_func):
+    
+    targets = one_hot(targets)
+    preserver_images = theta(images,masks)
+    destroyer_images = theta(images,1 - masks)
+
+    preserved_logits = black_box_func(preserver_images)
+    destroyer_logits = black_box_func(destroyer_images)
+
+    preserver_loss = class_selector_loss( preserved_logits )
+    destroyer_loss = class_selector_loss( destroyer_logits )
+    area_loss = average_mask_loss(masks)
+    smoothness_loss = total_variation(masks)
+
 
     return 1
 
@@ -57,4 +76,7 @@ def test():
     s.backward()
     print(torch.sum(m.grad))
 
-# test()
+a = Variable(torch.ones((2,1)))
+a[0,0] = 1
+a[1,0] = 4
+print(one_hot(a,10))

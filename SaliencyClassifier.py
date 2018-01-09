@@ -59,7 +59,7 @@ class SaliencyClassifier(nn.Module):
 
         self.scaleX = nn.AvgPool2d(kernel_size=16)
         self.fc = nn.Linear(BASE*8,class_size)
-
+        
         self._initialize_weights()
 
     def forward(self,x):
@@ -82,7 +82,7 @@ class SaliencyClassifier(nn.Module):
 
         # print(scaleX.size())
 
-        scaleC = self.fc(scaleX)
+        scaleC = F.softmax(self.fc(scaleX))
         # print(scaleC.size())
 
         return scale0,scale1,scale2,scale3,scaleX,scaleC

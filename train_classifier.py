@@ -38,11 +38,11 @@ classes = ('plane', 'car', 'bird', 'cat',
 net = SaliencyClassifier(10,4)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
 
 net,optimizer = load_checkpoint(net,optimizer)
 
-for epoch in range(20):  # loop over the dataset multiple times
+for epoch in range(10):  # loop over the dataset multiple times
 
 
     running_loss = 0.0

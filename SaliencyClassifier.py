@@ -113,17 +113,23 @@ class SaliencyModel(nn.Module):
         self.upsample0 = UpSampler(in_channels=192,out_channels=96,passthrough_channels=96)
         self.upsample1 = UpSampler(in_channels=96,out_channels=48,passthrough_channels=48)
         self.upsample2 = UpSampler(in_channels=48,out_channels=24,passthrough_channels=24)
-    
+        self.upsample = nn.ConvTranspose2d(in_channels=24,out_channels=2,kernel_size=3,padding=0)
+
     def forward(self,x):
         s0,s1,s2,s3,sX,sC = self.classifier(x)
-        print(s3.size())
+  
         s2 = self.upsample0(s3,s2)
-        print(s1.size())
+
         s1 = self.upsample1(s2,s1)
-        print(s1.size())
+   
         s0 = self.upsample2(s1,s0)
-        print(s0.size())
-        return s0
+
+        saliency_chans = self.upsample(s0)
+        a = torch.abs(saliency_chans[:,0,:,:])
+        b = torch.abs(saliency_chans[:,1,:,:])
+        mask = torch.unsqueeze(a/(a+b), dim=1)
+
+        return mask
 
 
 class UpSampler(nn.Module):

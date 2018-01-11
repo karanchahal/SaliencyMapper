@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import utils
 
-def save_checkpoint(state, filename='small.pth.tar'):
+def save_checkpoint(state, filename='sal.pth.tar'):
     torch.save(state, filename)
 
 def load_checkpoint(net,optimizer,filename='small.pth.tar'):
@@ -59,15 +59,12 @@ for epoch in range(10):  # loop over the dataset multiple times
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        masks = net(inputs)
-
-        print(inputs.size())
-        print(masks.size())
-        print(labels.size())
+        masks = net(inputs,labels)
 
         loss = utils.classifier_loss(inputs,masks,labels,black_box_func)
-        print('Loss is',loss)
-        break
+        print(loss.data[0])
+        loss.backward
+        optimizer.step()
         # _, preds = torch.max(outputs.data, 1)
 
         # loss = criterion(outputs, labels)
@@ -79,11 +76,10 @@ for epoch in range(10):  # loop over the dataset multiple times
         # running_loss += loss.data[0]
         # print(i)
         # print('Epoch = %f , Accuracy = %f, Loss = %f '%(epoch+1 , running_corrects/(4*(i+1)), running_loss/(4*(i+1))) )
-    break
-    # save_checkpoint({
-    #     'state_dict': net.state_dict(),
-    #     'optimizer' : optimizer.state_dict()
-    #     })
+    save_checkpoint({
+        'state_dict': net.state_dict(),
+        'optimizer' : optimizer.state_dict()
+        })
 
 
 # Testing 

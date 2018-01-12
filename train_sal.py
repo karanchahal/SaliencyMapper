@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 from torch.autograd import Variable
 import utils
+from scipy import misc
 
 def save_checkpoint(state, filename='sal.pth.tar'):
     torch.save(state, filename)
@@ -42,7 +43,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
 optimizer_bb = optim.SGD(black_box_func.parameters(), lr=0.0001, momentum=0.9)
 black_box_func,_ = load_checkpoint(black_box_func,optimizer_bb)
-
+net,optimizer = load_checkpoint(net,optimizer,'sal.pth.tar')
 for epoch in range(10):  # loop over the dataset multiple times
 
 
@@ -62,11 +63,17 @@ for epoch in range(10):  # loop over the dataset multiple times
         masks = net(inputs,labels)
 
         loss = utils.classifier_loss(inputs,masks,labels,black_box_func)
-        print(loss.data[0])
+        # print(loss.data[0])
+        # misc.imshow(inputs[0].data.numpy())
+        img = inputs[0].data.numpy().reshape((3,32,32))
+        mask = masks[0].data.numpy().reshape((32,32))
+        misc.imshow(img)
+        misc.imshow(mask)
+
         loss.backward
         optimizer.step()
         # _, preds = torch.max(outputs.data, 1)
-
+    break
         # loss = criterion(outputs, labels)
         # loss.backward()
         # optimizer.step()

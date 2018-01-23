@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import math
 import utils
 
-    
+
 
 def UpSampleBlock(in_channels,out_channels,kernel_size=3):
     layers = [
@@ -104,11 +104,27 @@ class SaliencyClassifier(nn.Module):
                 m.bias.data.zero_()
 
 
+class UpSampler(nn.Module):
+    def __init__(self,in_channels,out_channels,passthrough_channels):
+        super(UpSampler, self).__init__()
+        self.upsampler = UpSampleBlock(in_channels=in_channels,
+                                        out_channels=out_channels,
+                                        kernel_size=3)
+        bottleneck_in_channels = passthrough_channels + out_channels
+        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[1])
+
+    def forward(self,x,passthrough):
+
+        upsampled = self.upsampler(x)
+        upsampled = torch.cat((upsampled,passthrough),1)
+        return self.bottleneck(upsampled)
+
 class SaliencyModel(nn.Module):
     def __init__(self,class_size,batch_size):
         super(SaliencyModel,self).__init__()
         self.class_size = class_size
         self.batch_size = batch_size
+        
         self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
         self.upsample0 = UpSampler(in_channels=192,out_channels=96,passthrough_channels=96)
         self.upsample1 = UpSampler(in_channels=96,out_channels=48,passthrough_channels=48)
@@ -140,33 +156,4 @@ class SaliencyModel(nn.Module):
         mask = torch.unsqueeze(a/(a+b), dim=1)
 
         return mask
-
-
-class UpSampler(nn.Module):
-    def __init__(self,in_channels,out_channels,passthrough_channels):
-        super(UpSampler, self).__init__()
-        self.upsampler = UpSampleBlock(in_channels=in_channels,
-                                        out_channels=out_channels,
-                                        kernel_size=3)
-        bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[1])
-
-    def forward(self,x,passthrough):
-
-        upsampled = self.upsampler(x)
-        upsampled = torch.cat((upsampled,passthrough),1)
-        return self.bottleneck(upsampled)
-
-# class SaliencyLoss():
-    
-#     def__init__(self,classifier):
-#         self.classifier = classifier
-    
-#     def get_loss(self,masks,images,targets):
-        
-        
-
-# x = torch.autograd.Variable(torch.randn((1,3,32,32)))
-# model = SaliencyModel(10,1)
-# o = model(x)
 

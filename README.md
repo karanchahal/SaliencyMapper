@@ -8,16 +8,16 @@ NIPS Paper Implementation Challenge . Even though the author's  implementation e
 
 Differences from the Official Implementation:
 
--> Made for training the Cifar10 dataset,  oficial repo meant to train the ImageNet Dataset
--> Less Verbose , only the core details present. Loss, Model and Trainer
+* Made for training the Cifar10 dataset,  oficial repo meant to train the ImageNet Dataset
+*  Less Verbose , only the core details present. Loss, Model and Trainer
 
 
 # Files
 
-model.py ->  Main model hosted
-resnet.py -> Black Box Classifier
-train_classifier -> Trains classifier Model
-train_saliency -> Trains Saliency Model
+* model.py ->  Main model hosted
+* resnet.py -> Black Box Classifier
+* train_classifier -> Trains classifier Model
+* train_saliency -> Trains Saliency Model
 
 # Help
 Referred to the author's repo , this repo was made on the shoulders of giants.

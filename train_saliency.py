@@ -4,7 +4,6 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 import torch.optim as optim
 from torch.autograd import Variable
-
 from scipy import misc
 from model import saliency_model
 from resnet import resnet
@@ -41,8 +40,8 @@ def cifar10():
     return trainloader,testloader,classes
 
 
-
-
+num_epochs = 3
+trainloader,testloader,classes = cifar10()
 
 net = saliency_model()
 net = net.cuda()
@@ -50,12 +49,14 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters())
 
 black_box_func = resnet()
+black_box_func = black_box_func.cuda()
 loss_func = Loss(num_classes=10)
 
-for epoch in range(3):  # loop over the dataset multiple times
+for epoch in range(num_epochs):  # loop over the dataset multiple times
     
     running_loss = 0.0
     running_corrects = 0.0
+    
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
@@ -66,15 +67,11 @@ for epoch in range(3):  # loop over the dataset multiple times
         # zero the parameter gradients
         optimizer.zero_grad()
 
-        # forward + backward + optimize
         mask,out = net(inputs,labels)
        
-#         _, preds = torch.max(out.data, 1)
-#         loss = criterion(out,labels)
         loss = loss_func.get(mask,inputs,labels,black_box_func)
-      
-#         running_corrects += torch.sum(preds == labels.data)
         running_loss += loss.data[0]
+
         if(i%100 == 0):
           print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(4*(i+1))) )
        

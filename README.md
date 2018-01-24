@@ -3,6 +3,14 @@ Implementation of the paper :
 Real Time Image Saliency for Black Box Classifiers
 https://arxiv.org/abs/1705.07857
 
+# Results
+
+## Original Image
+
+Example 1             |  Example 2
+:-------------------------:|:-------------------------:
+![](./screenshots/images.png)  |  ![](./screenshots/images2.png)
+
 # Purpose
 NIPS Paper Implementation Challenge . Even though the author's  implementation exists, this is an attempt to make a more user friendly version of the code and specially purposed as a learning tool for the models in theis paper.
 

@@ -1,158 +1,149 @@
-import torch 
+'''ResNet in PyTorch.
+For Pre-activation ResNet, see 'preact_resnet.py'.
+Reference:
+[1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
+    Deep Residual Learning for Image Recognition. arXiv:1512.03385
+'''
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 from torch.autograd import Variable
-import torch.nn as nn 
-import torch.nn.functional as F 
-import math
 
 
+class PixelShuffleBlock(nn.Module):
+    def forward(self, x):
+        return F.pixel_shuffle(x, 2)
+      
 
+def CNNBlock(in_channels, out_channels,
+                 kernel_size=3, layers=1, stride=1,
+                 follow_with_bn=True, activation_fn=lambda: nn.ReLU(True), affine=True):
 
-def UpSampleBlock(in_channels,out_channels,kernel_size=3):
-    layers = [
-        BottleneckBlock(inplanes=in_channels,num_filters=[out_channels*4],filter_sizes=[kernel_size])[0],
-        nn.ConvTranspose2d(in_channels=out_channels*4,out_channels=out_channels*2,kernel_size=3,padding=0),
-        nn.ConvTranspose2d(in_channels=out_channels*2,out_channels=out_channels,kernel_size=3,padding=0),
-        nn.ReLU()
+        assert layers > 0 and kernel_size%2 and stride>0
+        current_channels = in_channels
+        _modules = []
+        for layer in range(layers):
+            _modules.append(nn.Conv2d(current_channels, out_channels, kernel_size, stride=stride if layer==0 else 1, padding=int(kernel_size/2), bias=not follow_with_bn))
+            current_channels = out_channels
+            if follow_with_bn:
+                _modules.append(nn.BatchNorm2d(current_channels, affine=affine))
+            if activation_fn is not None:
+                _modules.append(activation_fn())
+        return nn.Sequential(*_modules)
+
+def SubpixelUpsampler(in_channels, out_channels, kernel_size=3, activation_fn=lambda: torch.nn.ReLU(inplace=False), follow_with_bn=True):
+    _modules = [
+        CNNBlock(in_channels, out_channels * 4, kernel_size=kernel_size, follow_with_bn=follow_with_bn),
+        PixelShuffleBlock(),
+        activation_fn(),
     ]
-    
-    return nn.Sequential(*layers)
-    
+    return nn.Sequential(*_modules)
 
-def BottleneckBlock(num_filters,inplanes,filter_sizes,bn=True,activation=True,_list=False):
-    
-    layers = []
+class UpSampleBlock(nn.Module):
+    expansion = 1
 
-    for i,filter_size in enumerate(filter_sizes):
-        num_filter = num_filters[i]
-        layers.append(
-            nn.Conv2d(inplanes, num_filter,
-                        kernel_size=filter_size, bias=False)
-        )
-        if bn:
-            layers.append(nn.BatchNorm2d(num_filter))
-        if activation:
-            layers.append(nn.ReLU())
+    def __init__(self, in_channels, out_channels,passthrough_channels, stride=1):
+        super(UpSampleBlock, self).__init__()
+        self.upsampler = SubpixelUpsampler(in_channels=in_channels,out_channels=out_channels)
+        self.follow_up = Block(out_channels+passthrough_channels,out_channels)
 
-        inplanes = num_filter
-    
-    # layers.append(nn.MaxPool2d(kernel_size=pool_size, stride=2, padding=1))
-    if _list:
-        return layers
+    def forward(self, x, passthrough):
+        out = self.upsampler(x)
+        out = torch.cat((out,passthrough), 1)
+        return self.follow_up(out)
 
-    return nn.Sequential(*layers),inplanes
-    
 
-class SaliencyClassifier(nn.Module):
 
-    def __init__(self,class_size,batch_size):
-        super(SaliencyClassifier,self).__init__()
-        self.inplanes = 3
-        BASE = 24
+class Block(nn.Module):
+    expansion = 1
 
-        self.class_size = class_size
-        self.batch_size = batch_size
+    def __init__(self, in_planes, planes, stride=1):
+        super(Block, self).__init__()
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
 
-        self.scale0,self.inplanes = BottleneckBlock(num_filters=[BASE],inplanes=self.inplanes,filter_sizes=[3])
-        self.scale1,self.inplanes = BottleneckBlock(num_filters=[BASE*2],inplanes=self.inplanes,filter_sizes=[3])
-        self.scale2,self.inplanes = BottleneckBlock(num_filters=[BASE*4],inplanes=self.inplanes,filter_sizes=[3])
-        self.scale3,self.inplanes = BottleneckBlock(num_filters=[BASE*8],inplanes=self.inplanes,filter_sizes=[3])
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
 
-        self.scaleX = nn.AvgPool2d(kernel_size=16)
-        self.fc = nn.Linear(BASE*8,class_size)
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+
+class ResNet(nn.Module):
+    def __init__(self, block, num_blocks, num_classes=10):
+        super(ResNet, self).__init__()
+        self.in_planes = 64
         
-        self._initialize_weights()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        
+        self.layer1 = self._make_layer(block=block, planes=64, num_blocks=num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block=block, planes=128, num_blocks=num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block=block, planes=256, num_blocks=num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block=block, planes=512, num_blocks=num_blocks[3], stride=2)
+        
+        self.uplayer4 = UpSampleBlock(in_channels=512,out_channels=256,passthrough_channels=256)
+        self.uplayer3 = UpSampleBlock(in_channels=256,out_channels=128,passthrough_channels=128)
+        self.uplayer2 = UpSampleBlock(in_channels=128,out_channels=64,passthrough_channels=64)
+        
+        self.embedding = nn.Embedding(num_classes,512)
+        self.linear = nn.Linear(512*block.expansion, num_classes)
+        self.saliency_chans = nn.Conv2d(64,2,kernel_size=1,bias=False)
 
-    def forward(self,x):
-
-        img = x
-        scale0 = self.scale0(x)
-        # print(scale0.size())
-
-        scale1 = self.scale1(scale0)
-        # print(scale1.size())
-
-        scale2 = self.scale2(scale1)
-        # print(scale2.size())
-
-        scale3 = self.scale3(scale2)
-        # print(scale3.size())
-
-        scaleX = self.scaleX(scale3)
-        scaleX = scaleX.view(self.batch_size,-1)
-
-        # print(scaleX.size())
-
-        scaleC = F.softmax(self.fc(scaleX))
-        # print(scaleC.size())
-
-        return scale0,scale1,scale2,scale3,scaleX,scaleC
-    
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
+        
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
     
 
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
-
-
-class SaliencyModel(nn.Module):
-    def __init__(self,class_size,batch_size):
-        super(SaliencyModel,self).__init__()
-        self.class_size = class_size
-        self.batch_size = batch_size
-        self.classifier = SaliencyClassifier(self.class_size,self.batch_size)
-        self.upsample0 = UpSampler(in_channels=192,out_channels=96,passthrough_channels=96)
-        self.upsample1 = UpSampler(in_channels=96,out_channels=48,passthrough_channels=48)
-        self.upsample2 = UpSampler(in_channels=48,out_channels=24,passthrough_channels=24)
-        self.upsample = nn.ConvTranspose2d(in_channels=24,out_channels=2,kernel_size=3,padding=0)
-        self.embedding = nn.Embedding(class_size, 24)
-
-    def forward(self,x,_selectors):
-        s0,s1,s2,s3,sX,sC = self.classifier(x)
-
     
-        embedding = torch.squeeze(self.embedding(_selectors.view(-1,1)),1)
-        act = torch.sum(s0*embedding.view(-1,24,1,1),1, keepdim=True)
+    def forward(self, x,labels):
+        out = F.relu(self.bn1(self.conv1(x)))
+        
+        scale1 = self.layer1(out)
+        scale2 = self.layer2(scale1)
+        scale3 = self.layer3(scale2)
+        scale4 = self.layer4(scale3)
+
+      
+        em = torch.squeeze(self.embedding(labels.view(-1, 1)), 1)
+        act = torch.sum(scale4*em.view(-1, 512, 1, 1), 1, keepdim=True)
         th = torch.sigmoid(act)
-        s0 = s0*th
+        scale4 = scale4*th
         
-        s2 = self.upsample0(s3,s2)
-
-        s1 = self.upsample1(s2,s1)
-   
-        s0 = self.upsample2(s1,s0)
-
-
-
-
-        saliency_chans = self.upsample(s0)
+        
+        upsample3 = self.uplayer4(scale4,scale3)
+        upsample2 = self.uplayer3(upsample3,scale2)
+        upsample1 = self.uplayer2(upsample2,scale1)
+        
+        saliency_chans = self.saliency_chans(upsample1)
+        
+        
+        out = F.avg_pool2d(scale4, 4)
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        
         a = torch.abs(saliency_chans[:,0,:,:])
         b = torch.abs(saliency_chans[:,1,:,:])
-        mask = torch.unsqueeze(a/(a+b), dim=1)
+        
+        return torch.unsqueeze(a/(a+b), dim=1), out
 
-        return mask
 
-
-class UpSampler(nn.Module):
-    def __init__(self,in_channels,out_channels,passthrough_channels):
-        super(UpSampler, self).__init__()
-        self.upsampler = UpSampleBlock(in_channels=in_channels,
-                                        out_channels=out_channels,
-                                        kernel_size=3)
-        bottleneck_in_channels = passthrough_channels + out_channels
-        self.bottleneck,self.inplanes = BottleneckBlock(inplanes=bottleneck_in_channels,num_filters=[out_channels],filter_sizes=[1])
-
-    def forward(self,x,passthrough):
-
-        upsampled = self.upsampler(x)
-        upsampled = torch.cat((upsampled,passthrough),1)
-        return self.bottleneck(upsampled)
+def saliency_model():
+    return ResNet(Block, [2,2,2,2])

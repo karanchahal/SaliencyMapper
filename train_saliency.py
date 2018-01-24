@@ -49,7 +49,6 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters())
 
 black_box_func = resnet()
-
 loss_func = Loss(num_classes=10)
 
 for epoch in range(3):  # loop over the dataset multiple times

@@ -1,9 +1,3 @@
-'''ResNet in PyTorch.
-For Pre-activation ResNet, see 'preact_resnet.py'.
-Reference:
-[1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
-    Deep Residual Learning for Image Recognition. arXiv:1512.03385
-'''
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -81,9 +75,9 @@ class Block(nn.Module):
 
 
 
-class ResNet(nn.Module):
+class SaliencyModel(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
-        super(ResNet, self).__init__()
+        super(SaliencyModel, self).__init__()
         self.in_planes = 64
         
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
@@ -146,4 +140,4 @@ class ResNet(nn.Module):
 
 
 def saliency_model():
-    return ResNet(Block, [2,2,2,2])
+    return SaliencyModel(Block, [2,2,2,2])

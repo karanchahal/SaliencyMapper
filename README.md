@@ -10,7 +10,8 @@ https://arxiv.org/abs/1705.07857
 Example 1             |  Example 2
 :-------------------------:|:-------------------------:
 ![](./screenshots/images.png)  |  ![](./screenshots/images2.png)
-
+![](./screenshots/masks.png)  |  ![](./screenshots/masks2.png)
+![](./screenshots/segmented.png)  |  ![](./screenshots/segmented2.png)
 # Purpose
 NIPS Paper Implementation Challenge . Even though the author's  implementation exists, this is an attempt to make a more user friendly version of the code and specially purposed as a learning tool for the models in theis paper.
 

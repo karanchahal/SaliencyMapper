@@ -12,12 +12,12 @@ Example 1             |  Example 2
 ![](./screenshots/masks.png)  |  ![](./screenshots/masks2.png)
 ![](./screenshots/segmented.png)  |  ![](./screenshots/segmented2.png)
 # Purpose
-NIPS Paper Implementation Challenge . Even though the author's  implementation exists, this is an attempt to make a more user friendly version of the code and specially purposed as a learning tool for the models in theis paper.
+NIPS 2017 Paper Implementation Challenge . Even though the author's implementation exists, this is an attempt to make a more user friendly version of the code and especially purposed as a learning tool for the models in the paper.
 
 Differences from the Official Implementation:
 
-* Made for training the Cifar10 dataset,  oficial repo meant to train the ImageNet Dataset
-*  Less Verbose , only the core details present. Loss, Model and Trainer
+* Made for training on the Cifar10 dataset,  official repo  is meant to train the ImageNet Dataset
+*  Less Verbose, only the core details present. Loss, Model and Trainer. Readable Code
 
 
 # Files
@@ -28,7 +28,7 @@ Differences from the Official Implementation:
 * train_saliency -> Trains Saliency Model
 
 # Help
-Referred to the author's repo , this repo was made on the shoulders of giants.
+Referred to the author's repo ,this project was made on the shoulders of giants.
 Official Repo: https://github.com/PiotrDabkowski/pytorch-saliency
 
 

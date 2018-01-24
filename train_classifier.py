@@ -4,38 +4,43 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 import torch.optim as optim
 from torch.autograd import Variable
-
 from scipy import misc
+from resnet import resnet
 
-def save_checkpoint(state, filename='sal.pth.tar'):
+def save_checkpoint(state, filename='black_box_func.tar'):
     torch.save(state, filename)
 
-def load_checkpoint(net,optimizer,filename='small.pth.tar'):
+def load_checkpoint(net,optimizer,filename='black_box_func.tar'):
     checkpoint = torch.load(filename)
     net.load_state_dict(checkpoint['state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer'])
     return net,optimizer
+
+
+def cifar10():
     
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    classes = ('plane', 'car', 'bird', 'cat',
+            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    transform = transforms.Compose(
+        [transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                            shuffle=True, num_workers=2)
+
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                          shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=4,
+                                            shuffle=False, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                         shuffle=False, num_workers=2)
+    return trainloader,testloader,classes
+ 
+trainloader,testloader,classes = cifar10()
 
-classes = ('plane', 'car', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-
-
-black_box_func = classifier()
+black_box_func = resnet()
 black_box_func = black_box_func.cuda()
 
 
@@ -59,8 +64,7 @@ for epoch in range(6):  # loop over the dataset multiple times
 
         # forward + backward + optimize
         out = black_box_func(inputs)
-        
-        
+
         _, preds = torch.max(out.data, 1)
         loss = criterion(out,labels)   
         running_corrects += torch.sum(preds == labels.data)

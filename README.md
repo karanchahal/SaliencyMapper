@@ -5,7 +5,6 @@ https://arxiv.org/abs/1705.07857
 
 # Results
 
-## Original Image
 
 Example 1             |  Example 2
 :-------------------------:|:-------------------------:

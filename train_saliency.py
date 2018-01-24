@@ -1,12 +1,13 @@
-
-
 import torch
 import torchvision
 import torch.nn as nn
 import torchvision.transforms as transforms
 import torch.optim as optim
 from torch.autograd import Variable
+
 from scipy import misc
+from model import saliency_model
+from resnet import resnet
 
 def save_checkpoint(state, filename='sal.pth.tar'):
     torch.save(state, filename)
@@ -42,14 +43,16 @@ def cifar10():
 
 
 
-net = ResNet18()
+net = saliency_model()
 net = net.cuda()
-
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters())
-loss_func = Loss(num_classes=10)
-for epoch in range(3):  # loop over the dataset multiple times
 
+black_box_func = resnet()
+
+loss_func = Loss(num_classes=10)
+
+for epoch in range(3):  # loop over the dataset multiple times
     
     running_loss = 0.0
     running_corrects = 0.0

@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from scipy import misc
 from model import saliency_model
 from resnet import resnet
+from loss import Loss
 
 def save_checkpoint(state, filename='sal.pth.tar'):
     torch.save(state, filename)

@@ -26,6 +26,14 @@ Differences from the Official Implementation:
 * resnet.py -> Black Box Classifier
 * train_classifier -> Trains classifier Model
 * train_saliency -> Trains Saliency Model
+# To do
+- [ ] Logging
+- [ ] Responsive Training bar ala Keras
+- [ ] Validation Training
+- [ ] Make code to work for any dataset
+- [ ] Add circle ci and Docker support
+- [ ] Command Line Interface
+- [ ] ImageNet training
 
 # Help
 Referred to the author's repo ,this project was made on the shoulders of giants.

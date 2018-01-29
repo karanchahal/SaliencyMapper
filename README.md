@@ -27,10 +27,13 @@ Differences from the Official Implementation:
 * train_classifier -> Trains classifier Model
 * train_saliency -> Trains Saliency Model
 # To do
-1. Make code to work for any dataset
-2. Add circle ci and Docker support
-3. Commanf Line Interface
-4. ImageNet training
+- [ ] Logging
+- [ ] Responsive Training bar ala Keras
+- [ ] Validation Training
+- [ ] Make code to work for any dataset
+- [ ] Add circle ci and Docker support
+- [ ] Command Line Interface
+- [ ] ImageNet training
 
 # Help
 Referred to the author's repo ,this project was made on the shoulders of giants.

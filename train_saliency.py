@@ -38,44 +38,48 @@ def cifar10():
                                             shuffle=False, num_workers=2)
 
     return trainloader,testloader,classes
+from tqdm import tqdm
 
+def train():
+    num_epochs = 3
+    trainloader,testloader,classes = cifar10()
 
-num_epochs = 3
-trainloader,testloader,classes = cifar10()
+    net = saliency_model()
+    net = net.cuda()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(net.parameters())
 
-net = saliency_model()
-net = net.cuda()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters())
+    black_box_func = resnet()
+    black_box_func = black_box_func.cuda()
+    loss_func = Loss(num_classes=10)
 
-black_box_func = resnet()
-black_box_func = black_box_func.cuda()
-loss_func = Loss(num_classes=10)
+    for epoch in range(num_epochs):  # loop over the dataset multiple times
+        
+        running_loss = 0.0
+        running_corrects = 0.0
+        
+        for i, data in tqdm(enumerate(trainloader, 0)):
+            # get the inputs
+            inputs, labels = data
 
-for epoch in range(num_epochs):  # loop over the dataset multiple times
-    
-    running_loss = 0.0
-    running_corrects = 0.0
-    
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs
-        inputs, labels = data
+            # wrap them in Variable
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 
-        # wrap them in Variable
-        inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+            mask,out = net(inputs,labels)
+        
+            loss = loss_func.get(mask,inputs,labels,black_box_func)
+            running_loss += loss.data[0]
 
-        mask,out = net(inputs,labels)
-       
-        loss = loss_func.get(mask,inputs,labels,black_box_func)
-        running_loss += loss.data[0]
+            if(i%10 == 0):
+                print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(4*(i+1))) )
+        
+            loss.backward()
+            optimizer.step()
+        
+        save_checkpoint(net,'saliency_model.tar')
 
-        if(i%100 == 0):
-          print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(4*(i+1))) )
-       
-        loss.backward()
-        optimizer.step()
-    
-    save_checkpoint(net,'saliency_model.tar')
+train()
+

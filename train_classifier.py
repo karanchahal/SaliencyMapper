@@ -7,15 +7,15 @@ from torch.autograd import Variable
 from scipy import misc
 from resnet import resnet
 
-def save_checkpoint(state, filename='black_box_func.tar'):
+def save_checkpoint(state, filename='black_box_func.pth'):
     torch.save(state, filename)
-
-def load_checkpoint(net,optimizer,filename='black_box_func.tar'):
-    checkpoint = torch.load(filename)
-    net.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    return net,optimizer
-
+#it seems wrong tar ,so convert to pth
+#def load_checkpoint(net,optimizer,filename='black_box_func.pth'):
+ #   checkpoint = torch.load(filename)
+  #  net.load_state_dict(checkpoint['state_dict'])
+   # optimizer.load_state_dict(checkpoint['optimizer'])
+    #return net,optimizer
+#it has not been used for the code
 
 def cifar10():
     
@@ -68,11 +68,12 @@ for epoch in range(6):  # loop over the dataset multiple times
         _, preds = torch.max(out.data, 1)
         loss = criterion(out,labels)   
         running_corrects += torch.sum(preds == labels.data)
-        running_loss += loss.data[0]
+        running_corrects=running_corrects.float()#avoid the acc=0
+        running_loss += loss.data
         if(i%100 == 0):
           print('Epoch = %f , Accuracy = %f, Loss = %f '%(epoch+1 , running_corrects/(4*(i+1)), running_loss/(4*(i+1))) )
        
         loss.backward()
         optimizer.step()
     
-    save_checkpoint(black_box_func, filename='black_box_func.tar')
+    save_checkpoint(black_box_func, filename='black_box_func.pth')
